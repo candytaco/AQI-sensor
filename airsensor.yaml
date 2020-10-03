@@ -1,0 +1,233 @@
+esphome:
+  name: airsensor
+  platform: ESP8266
+  board: d1_mini
+  includes:
+    - aqicalc.h
+
+wifi:
+  ssid: ""
+  password: ""
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: ""
+    password: ""
+
+captive_portal:
+
+# Enable logging
+logger:
+  baud_rate: 0
+
+# Enable Home Assistant API
+api:
+  password: "Excellent"
+
+ota:
+  password: "Excellent"
+
+uart:
+  - rx_pin: D7
+    baud_rate: 9600
+    id: soft_uart
+
+
+switch:
+  - platform: template
+    name: "Display"
+    id: displaySwitch
+    icon: "mdi:monitor"
+    lambda: |-
+      return (id(displayOn)) ? true : false;
+    turn_on_action: 
+      then:
+        - lambda: |-
+            id(displayOn) = true;
+    turn_off_action: 
+      then:
+        - lambda: |-
+            id(displayOn) = false;
+  - platform: template
+    name: 'AQI Light'
+    id: LEDSwitch
+    icon: "mdi:lightbulb"
+    lambda: |-
+      return (id(LEDOn)) ? true : false;
+    turn_on_action:
+      then:
+        - lambda: |-
+            id(LEDOn) = true;
+    turn_off_action:
+      then:
+        - lambda: |-
+            id(LEDOn) = false;
+  - platform: template
+    name: "EPA Correction"
+    id: EPACorrectionSwitch
+    icon: "mdi:auto-fix"
+    lambda: |-
+      return (id(EPACorrection) && !isnan(id(temperature).state));
+    turn_on_action: 
+      then:
+        - lambda: |-
+            id(EPACorrection) = true;
+    turn_off_action: 
+      then:
+        - lambda: |-
+            id(EPACorrection) = false;
+
+
+globals:
+  - id: displayOn
+    type: bool
+    restore_value: yes
+    initial_value: '1'
+  - id: LEDOn
+    type: bool
+    restore_value: yes
+    initial_value: '1'
+  - id: EPACorrection
+    type: bool
+    restore_value: yes
+    initial_value: '1'
+
+
+sensor:
+  - platform: pmsx003
+    uart_id: soft_uart
+    type: PMSX003
+    pm_1_0:
+      name: "PM1.0 Concentration"
+    pm_2_5:
+      id: pm25
+    pm_10_0:
+      id: pm10
+      name: "PM10 Concentration"
+  - platform: dht
+    pin: D4
+    temperature:
+      id: temperature
+      name: "Temperature"
+    humidity:
+      id: humidity
+      name: "Humidity"
+    update_interval: 5s
+    model: DHT22
+
+  # PM2.5 that can be optionally corrected for EPA values
+  - platform: template
+    id : pm2p5
+    name: "PM2.5 Concentration"
+    accuracy_decimals: 0
+    unit_of_measurement: µg/m³
+    lambda: |-
+      if (id(EPACorrection) && !isnan(id(temperature).state))
+        return aqicalc.GetCorrectedPM2p5(id(pm25).state, id(humidity).state);
+      return id(pm25).state;
+    update_interval: 1s
+
+  - platform: template
+    id: aqi
+    name: "AQI realtime"
+    lambda: |-
+      return aqicalc.get_aqi(id(pm2p5).state, id(pm10).state);
+    update_interval: 1s
+    unit_of_measurement: AQI
+
+  - platform: template
+    id: aqiavg
+    name: "AQI 10-min average"
+    unit_of_measurement: AQI
+    lambda: |-
+      return id(aqi).state;
+    update_interval: 10s
+    filters:
+      - sliding_window_moving_average:
+          window_size: 60
+          send_every: 1
+    on_value:
+      then:
+        - lambda: |-
+            auto light = id(aqilight).turn_on();
+            auto a = id(aqiavg).state;
+            if (a < 50) light.set_rgb(0, 1, 0);
+            else if (a < 100) light.set_rgb(1, 1, 0);
+            else if (a < 150) light.set_rgb(1, 0.5, 0);
+            else if (a < 200) light.set_rgb(1, 0, 0);
+            else light.set_rgb(1, 0, 0.5);
+            light.set_brightness(id(LEDOn) ? 0.25 : 0);
+            light.perform();
+
+#  - platform: rotary_encoder
+#    name: "Rotary Encoder"
+#    pin_a: D5
+#    pin_b: D0
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: D6
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "Encoder Switch"
+  - platform: template
+    name: "EPA Correction"
+    lambda: |-
+      return id(EPACorrection);
+
+light:
+  - platform: fastled_clockless
+    chipset: WS2812
+    pin: D3
+    num_leds: 1
+    rgb_order: GRB
+    name: "aqi light"
+    id: aqilight
+
+i2c:
+  sda: D2
+  scl: D1
+
+font:
+  - file: "seguisb.ttf"
+    id: SegoeUISB
+    glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/-³°.%"
+    size: 14
+  - file: "seguisb.ttf"
+    id: SegoeUISBSmall
+    glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/³°.%"
+    size: 11
+
+display:
+  - platform: ssd1306_i2c
+    id: oled
+    model: "SSD1306 128x64"
+    address: 0x3C
+    lambda: |-
+      if (id(displayOn))
+      {
+        it.printf(0, 5, id(SegoeUISBSmall), "PM 2.5%s", (id(EPACorrection) && !isnan(id(temperature).state)) ? " C" : "");
+        it.printf(0, 18, id(SegoeUISB), "%3d", int(id(pm2p5).state) < 999 ? int(id(pm2p5).state) : -1);
+        it.printf(24, 20, id(SegoeUISBSmall), "μg/m³");
+        it.printf(64, 5, id(SegoeUISBSmall), "PM 10");
+        it.printf(64, 18, id(SegoeUISB), "%3d", int(id(pm10).state) < 999 ? int(id(pm10).state) : -1);
+        it.printf(88, 20, id(SegoeUISBSmall), "μg/m³");
+
+        if (id(EPACorrection) && !isnan(id(temperature).state))
+          it.printf(0, 38, id(SegoeUISBSmall), "AQI Corr.");
+        else
+          it.printf(0, 38, id(SegoeUISBSmall), "AQI raw");
+        it.printf(0, 51, id(SegoeUISB), "%3d", int(id(aqi).state));
+        
+        if (!isnan(id(temperature).state)) 
+        {
+          it.printf(64, 36, id(SegoeUISB), "%0.1f", id(temperature).state * 9 / 5 + 32);
+          it.printf(94, 36, id(SegoeUISBSmall), "°F");
+          it.printf(64, 51, id(SegoeUISB), "%0.1f", id(humidity).state);
+          it.printf(94, 51, id(SegoeUISBSmall), "%%");
+        }
+      }
+      
+
+
