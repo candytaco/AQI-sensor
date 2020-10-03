@@ -190,12 +190,12 @@ i2c:
   scl: D1
 
 font:
-  - file: "seguisb.ttf"
-    id: SegoeUISB
+  - file: ""
+    id: TextFont
     glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/-³°.%"
     size: 14
-  - file: "seguisb.ttf"
-    id: SegoeUISBSmall
+  - file: ""
+    id: TextFontSmall
     glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/³°.%"
     size: 11
 
@@ -207,25 +207,25 @@ display:
     lambda: |-
       if (id(displayOn))
       {
-        it.printf(0, 5, id(SegoeUISBSmall), "PM 2.5%s", (id(EPACorrection) && !isnan(id(temperature).state)) ? " C" : "");
-        it.printf(0, 18, id(SegoeUISB), "%3d", int(id(pm2p5).state) < 999 ? int(id(pm2p5).state) : -1);
-        it.printf(24, 20, id(SegoeUISBSmall), "μg/m³");
-        it.printf(64, 5, id(SegoeUISBSmall), "PM 10");
-        it.printf(64, 18, id(SegoeUISB), "%3d", int(id(pm10).state) < 999 ? int(id(pm10).state) : -1);
-        it.printf(88, 20, id(SegoeUISBSmall), "μg/m³");
+        it.printf(0, 5, id(TextFontSmall), "PM 2.5%s", (id(EPACorrection) && !isnan(id(temperature).state)) ? " C" : "");
+        it.printf(0, 18, id(TextFont), "%3d", int(id(pm2p5).state) < 999 ? int(id(pm2p5).state) : -1);
+        it.printf(24, 20, id(TextFontSmall), "μg/m³");
+        it.printf(64, 5, id(TextFontSmall), "PM 10");
+        it.printf(64, 18, id(TextFont), "%3d", int(id(pm10).state) < 999 ? int(id(pm10).state) : -1);
+        it.printf(88, 20, id(TextFontSmall), "μg/m³");
 
         if (id(EPACorrection) && !isnan(id(temperature).state))
-          it.printf(0, 38, id(SegoeUISBSmall), "AQI Corr.");
+          it.printf(0, 38, id(TextFontSmall), "AQI Corr.");
         else
-          it.printf(0, 38, id(SegoeUISBSmall), "AQI raw");
-        it.printf(0, 51, id(SegoeUISB), "%3d", int(id(aqi).state));
+          it.printf(0, 38, id(TextFontSmall), "AQI raw");
+        it.printf(0, 51, id(TextFont), "%3d", int(id(aqi).state));
         
         if (!isnan(id(temperature).state)) 
         {
-          it.printf(64, 36, id(SegoeUISB), "%0.1f", id(temperature).state * 9 / 5 + 32);
-          it.printf(94, 36, id(SegoeUISBSmall), "°F");
-          it.printf(64, 51, id(SegoeUISB), "%0.1f", id(humidity).state);
-          it.printf(94, 51, id(SegoeUISBSmall), "%%");
+          it.printf(64, 36, id(TextFont), "%0.1f", id(temperature).state * 9 / 5 + 32);
+          it.printf(94, 36, id(TextFontSmall), "°F");
+          it.printf(64, 51, id(TextFont), "%0.1f", id(humidity).state);
+          it.printf(94, 51, id(TextFontSmall), "%%");
         }
       }
       
