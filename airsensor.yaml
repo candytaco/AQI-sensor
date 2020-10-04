@@ -141,7 +141,7 @@ sensor:
     unit_of_measurement: AQI
     lambda: |-
       return id(aqi).state;
-    update_interval: 10s
+    update_interval: 2s
     filters:
       - sliding_window_moving_average:
           window_size: 60
@@ -149,15 +149,23 @@ sensor:
     on_value:
       then:
         - lambda: |-
-            auto light = id(aqilight).turn_on();
-            auto a = id(aqiavg).state;
-            if (a < 50) light.set_rgb(0, 1, 0);
-            else if (a < 100) light.set_rgb(1, 1, 0);
-            else if (a < 150) light.set_rgb(1, 0.5, 0);
-            else if (a < 200) light.set_rgb(1, 0, 0);
-            else light.set_rgb(1, 0, 0.5);
-            light.set_brightness(id(LEDOn) ? 0.25 : 0);
-            light.perform();
+            if (id(LEDOn))
+            {
+               auto light = id(aqilight).turn_on();
+               auto a = id(aqiavg).state;
+               if (a < 50) light.set_rgb(0, 1, 0);
+               else if (a < 100) light.set_rgb(1, 1, 0);
+               else if (a < 150) light.set_rgb(1, 0.5, 0);
+               else if (a < 200) light.set_rgb(1, 0, 0);
+               else light.set_rgb(1, 0, 0.5);
+               light.set_brightness(0.25);
+               light.perform();
+            }
+            else
+            {
+               auto light = id(aqilight).turn_off();
+               light.perform();
+            }
 
 #  - platform: rotary_encoder
 #    name: "Rotary Encoder"
@@ -228,6 +236,3 @@ display:
           it.printf(94, 51, id(TextFontSmall), "%%");
         }
       }
-      
-
-
