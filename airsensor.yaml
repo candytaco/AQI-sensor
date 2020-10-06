@@ -6,13 +6,13 @@ esphome:
     - aqicalc.h
 
 wifi:
-  ssid: ""
-  password: ""
+  ssid: "ssid"
+  password: "password"
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: ""
-    password: ""
+    ssid: "ssid1"
+    password: "password1"
 
 captive_portal:
 
@@ -134,16 +134,16 @@ sensor:
     model: DHT22
 
   # temperature that can be optionally corrected for thermometer offset
-  # linear coeffs as of 10/5
+  # linear coeffs as of 10/6
   - platform: template
     id: temperature
     name: "Temperature"
     accuracy_decimals: 1
-    unit_of_measurement: °F
+    unit_of_measurement: °C
     lambda: |-
       if (id(TemperatureCorrection))
-        return (id(temp).state * 9 / 5 + 32) * 0.72735 + 16.84;
-      return id(temp).state * 9 / 5 + 32;
+        return id(temp).state * 0.76871 + 3.3095;
+      return id(temp).state;
     update_interval: 5s
 
   # PM2.5 that can be optionally corrected for EPA values
@@ -229,11 +229,11 @@ i2c:
   scl: D1
 
 font:
-  - file: ""
+  - file: "fontfile"
     id: TextFont
     glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/-³°.%"
     size: 14
-  - file: "seguisb.ttf"
+  - file: "fontfile"
     id: TextFontSmall
     glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/³°.%"
     size: 11
