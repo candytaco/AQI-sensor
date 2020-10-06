@@ -76,6 +76,20 @@ switch:
       then:
         - lambda: |-
             id(EPACorrection) = false;
+  - platform: template
+    name: 'Temperature correction'
+    id: TemperatureCorrectionSwitch
+    icon: "mdi:auto-fix"
+    lambda: |-
+      return (id(TemperatureCorrection)) ? true : false;
+    turn_on_action:
+      then:
+        - lambda: |-
+            id(TemperatureCorrection) = true;
+    turn_off_action:
+      then:
+        - lambda: |-
+            id(TemperatureCorrection) = false;
 
 
 globals:
@@ -88,6 +102,10 @@ globals:
     restore_value: yes
     initial_value: '1'
   - id: EPACorrection
+    type: bool
+    restore_value: yes
+    initial_value: '1'
+  - id: TemperatureCorrection
     type: bool
     restore_value: yes
     initial_value: '1'
@@ -107,13 +125,26 @@ sensor:
   - platform: dht
     pin: D4
     temperature:
-      id: temperature
-      name: "Temperature"
+      id: temp
+      name: "Raw Temperature"
     humidity:
       id: humidity
       name: "Humidity"
     update_interval: 5s
     model: DHT22
+
+  # temperature that can be optionally corrected for thermometer offset
+  # linear coeffs as of 10/5
+  - platform: template
+    id: temperature
+    name: "Temperature"
+    accuracy_decimals: 1
+    unit_of_measurement: °F
+    lambda: |-
+      if (id(TemperatureCorrection))
+        return (id(temp).state * 9 / 5 + 32) * 0.72735 + 16.84;
+      return id(temp).state * 9 / 5 + 32;
+    update_interval: 5s
 
   # PM2.5 that can be optionally corrected for EPA values
   - platform: template
@@ -202,7 +233,7 @@ font:
     id: TextFont
     glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/-³°.%"
     size: 14
-  - file: ""
+  - file: "seguisb.ttf"
     id: TextFontSmall
     glyphs: "ABCDEFGHJIKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz0123456789μ/³°.%"
     size: 11
