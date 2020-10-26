@@ -134,7 +134,7 @@ sensor:
     model: DHT22
 
   # temperature that can be optionally corrected for thermometer offset
-  # linear coeffs as of 10/6
+  # linear coeffs as of 10/26/2020
   - platform: template
     id: temperature
     name: "Temperature"
@@ -142,7 +142,7 @@ sensor:
     unit_of_measurement: °C
     lambda: |-
       if (id(TemperatureCorrection))
-        return id(temp).state * 0.76871 + 3.3095;
+        return id(temp).state * 0.91539 -0.55491;
       return id(temp).state;
     update_interval: 5s
 
